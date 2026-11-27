@@ -1,0 +1,1355 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#13243a">
+  <title>Radar Inmobiliario</title>
+
+  <!-- Leaflet 1.9.4 + Leaflet.Draw: mapa, polígonos y radios. -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css">
+
+  <style>
+    :root {
+      --navy: #13243a;
+      --navy-2: #203650;
+      --blue: #2563eb;
+      --teal: #0f9f91;
+      --bg: #f3f6fa;
+      --line: #e2e8f0;
+      --muted: #66758a;
+      --text: #172538;
+      --white: #fff;
+      --shadow: 0 12px 32px rgba(18, 38, 63, .10);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    button, input, select { font: inherit; }
+
+    .topbar {
+      min-height: 68px;
+      padding: 12px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      color: #fff;
+      background: var(--navy);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #2d77fa, #0eaa9c);
+      font-size: 21px;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: .2px;
+    }
+
+    .brand small {
+      display: block;
+      color: #b8c7d9;
+      margin-top: 2px;
+      font-size: 11px;
+    }
+
+    .top-actions { display: flex; gap: 8px; align-items: center; }
+
+    .top-link {
+      color: #e6edf7;
+      text-decoration: none;
+      font-size: 12px;
+      padding: 8px 10px;
+      border: 1px solid #456078;
+      border-radius: 8px;
+    }
+
+    .app-shell {
+      height: calc(100vh - 68px);
+      min-height: 620px;
+      display: grid;
+      grid-template-columns: 350px minmax(0, 1fr);
+      gap: 14px;
+      padding: 14px;
+    }
+
+    .sidebar {
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .panel {
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      box-shadow: var(--shadow);
+    }
+
+    .filters { padding: 16px; }
+
+    .section-title {
+      margin: 0 0 4px;
+      font-size: 16px;
+      font-weight: 750;
+    }
+
+    .section-subtitle {
+      margin: 0 0 14px;
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .field { margin-bottom: 10px; }
+
+    .field label {
+      display: block;
+      margin-bottom: 5px;
+      color: #536277;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .field input, .field select {
+      width: 100%;
+      height: 37px;
+      border: 1px solid #d9e1eb;
+      outline: none;
+      border-radius: 8px;
+      padding: 0 10px;
+      color: var(--text);
+      background: #fff;
+      font-size: 12px;
+    }
+
+    .field input:focus, .field select:focus {
+      border-color: #6593f6;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, .10);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+    }
+
+    .filters-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 9px;
+      padding: 10px 12px;
+      font-size: 12px;
+      font-weight: 750;
+      cursor: pointer;
+      transition: .15s ease;
+    }
+
+    .btn:disabled { cursor: wait; opacity: .65; }
+
+    .btn-primary { background: var(--blue); color: #fff; flex: 1; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-secondary { background: #edf2f8; color: #26384e; }
+    .btn-outline { background: #fff; color: #3b4d63; border: 1px solid #dbe3ec; }
+
+    .filters-note {
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 1.45;
+      margin: 10px 0 0;
+    }
+
+    .results-panel {
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .results-head {
+      padding: 13px 15px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .results-head strong { font-size: 13px; }
+
+    .count {
+      color: var(--blue);
+      background: #edf3ff;
+      padding: 5px 8px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .results-list { overflow: auto; padding: 10px; }
+
+    .result-card {
+      border: 1px solid #e4eaf2;
+      border-radius: 11px;
+      margin-bottom: 9px;
+      padding: 11px;
+      display: grid;
+      grid-template-columns: 82px minmax(0, 1fr);
+      gap: 10px;
+      cursor: pointer;
+      background: #fff;
+    }
+
+    .result-card:hover {
+      border-color: #9bb8f7;
+      box-shadow: 0 5px 16px rgba(31, 69, 125, .08);
+    }
+
+    .result-photo {
+      width: 82px;
+      height: 82px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: #eef2f7;
+    }
+
+    .result-placeholder {
+      display: grid;
+      place-items: center;
+      color: #7890aa;
+      font-size: 28px;
+    }
+
+    .result-title {
+      font-size: 12px;
+      line-height: 1.35;
+      font-weight: 800;
+      margin: 0 0 4px;
+    }
+
+    .result-price {
+      color: #087d70;
+      font-size: 16px;
+      font-weight: 850;
+      margin: 0 0 3px;
+    }
+
+    .result-meta {
+      color: #65758b;
+      font-size: 10px;
+      line-height: 1.5;
+    }
+
+    .chips {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+
+    .chip {
+      padding: 3px 6px;
+      background: #eef4ff;
+      color: #315caa;
+      border-radius: 20px;
+      font-size: 9px;
+      font-weight: 750;
+    }
+
+    .chip.source { background: #eaf8f5; color: #087d70; }
+    .chip.warn { background: #fff5e8; color: #a75a00; }
+
+    .open-link {
+      display: inline-block;
+      margin-top: 6px;
+      color: #245cd2;
+      font-size: 10px;
+      font-weight: 750;
+      text-decoration: none;
+    }
+
+    .open-link:hover { text-decoration: underline; }
+
+    .empty {
+      padding: 24px 14px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .map-panel {
+      position: relative;
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+      min-height: 500px;
+      background: #dfe8ef;
+    }
+
+    .map-floating {
+      position: absolute;
+      z-index: 500;
+      top: 13px;
+      left: 13px;
+      right: 13px;
+      pointer-events: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .map-tip, .map-tools {
+      pointer-events: auto;
+      background: rgba(255,255,255,.96);
+      border: 1px solid rgba(220,228,237,.95);
+      box-shadow: 0 5px 18px rgba(15,35,59,.12);
+      border-radius: 10px;
+      padding: 9px 11px;
+    }
+
+    .map-tip strong { display: block; font-size: 11px; }
+
+    .map-tip span {
+      display: block;
+      color: var(--muted);
+      font-size: 10px;
+      margin-top: 2px;
+    }
+
+    .map-tools { display: flex; align-items: center; gap: 6px; }
+    .map-tools button { padding: 7px 9px; font-size: 10px; }
+
+    .map-legend {
+      position: absolute;
+      z-index: 500;
+      bottom: 17px;
+      left: 14px;
+      padding: 9px 11px;
+      background: rgba(255,255,255,.96);
+      box-shadow: 0 5px 18px rgba(15,35,59,.12);
+      border-radius: 9px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      font-size: 10px;
+      color: #536277;
+    }
+
+    .legend-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 5px;
+    }
+
+    .statusbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 7px 10px;
+      border-top: 1px solid var(--line);
+      background: #fff;
+      color: #718096;
+      font-size: 10px;
+      gap: 8px;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #0eaa84;
+      display: inline-block;
+      margin-right: 5px;
+    }
+
+    .warnings {
+      color: #9a5b00;
+      background: #fff8e9;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 10px;
+      line-height: 1.4;
+      margin-bottom: 8px;
+    }
+
+    .leaflet-popup-content { min-width: 175px; }
+    .popup-title { font-weight: 800; font-size: 12px; margin-bottom: 4px; }
+    .popup-price { color: #087d70; font-weight: 850; font-size: 14px; }
+    .popup-small { font-size: 10px; color: #66758a; margin-top: 3px; }
+
+    @media (max-width: 980px) {
+      .app-shell {
+        height: auto;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .sidebar { display: contents; }
+      .filters { order: 1; }
+      .map-panel { order: 2; height: 62vh; min-height: 420px; }
+      .results-panel { order: 3; max-height: 520px; }
+      #map { min-height: 420px; }
+    }
+
+    @media (max-width: 560px) {
+      .topbar { padding: 10px 12px; }
+      .brand h1 { font-size: 15px; }
+      .top-link { display: none; }
+      .app-shell { padding: 8px; gap: 8px; }
+      .map-floating { top: 8px; left: 8px; right: 8px; flex-wrap: wrap; }
+      .map-tools { margin-left: auto; }
+      .map-tools button { padding: 6px; }
+      .map-legend { bottom: 8px; left: 8px; }
+    }
+  </style>
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">⌖</div>
+      <div>
+        <h1>RADAR INMOBILIARIO</h1>
+        <small>Encuentra casas, terrenos y oportunidades por zona</small>
+      </div>
+    </div>
+
+    <div class="top-actions">
+      <a class="top-link" href="https://www.facebook.com/marketplace/" target="_blank" rel="noopener">Marketplace ↗</a>
+      <a class="top-link" href="https://www.inmuebles24.com/" target="_blank" rel="noopener">Inmuebles24 ↗</a>
+    </div>
+  </header>
+
+  <main class="app-shell">
+    <aside class="sidebar">
+
+      <section class="panel filters">
+        <h2 class="section-title">Define tu búsqueda</h2>
+        <p class="section-subtitle">
+          Primero elige una zona en el mapa. Después ajusta los filtros de precio y características.
+        </p>
+
+        <div class="field">
+          <label for="q">Palabras clave</label>
+          <input id="q" type="search" placeholder="Ej. terreno con servicios, casa...">
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label for="type">Tipo de inmueble</label>
+            <select id="type">
+              <option value="todos">Todos</option>
+              <option value="terreno">Terreno</option>
+              <option value="casa">Casa</option>
+              <option value="rancho">Rancho / quinta</option>
+              <option value="comercial">Comercial</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="source">Fuente</label>
+            <select id="source">
+              <option value="all">Todas</option>
+              <option value="mercadolibre">Mercado Libre</option>
+              <option value="database">Base propia / otros portales</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="state">Estado</label>
+          <select id="state">
+            <option value="">Todo México</option>
+            <option>Aguascalientes</option>
+            <option>Baja California</option>
+            <option>Baja California Sur</option>
+            <option>Campeche</option>
+            <option>Chiapas</option>
+            <option>Chihuahua</option>
+            <option>Ciudad de México</option>
+            <option>Coahuila</option>
+            <option>Colima</option>
+            <option>Durango</option>
+            <option>Estado de México</option>
+            <option>Guanajuato</option>
+            <option>Guerrero</option>
+            <option>Hidalgo</option>
+            <option>Jalisco</option>
+            <option>Michoacán</option>
+            <option>Morelos</option>
+            <option>Nayarit</option>
+            <option>Nuevo León</option>
+            <option>Oaxaca</option>
+            <option>Puebla</option>
+            <option>Querétaro</option>
+            <option>Quintana Roo</option>
+            <option>San Luis Potosí</option>
+            <option>Sinaloa</option>
+            <option>Sonora</option>
+            <option>Tabasco</option>
+            <option>Tamaulipas</option>
+            <option>Tlaxcala</option>
+            <option>Veracruz</option>
+            <option>Yucatán</option>
+            <option>Zacatecas</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="municipality">Municipio o localidad</label>
+          <input id="municipality" type="text" placeholder="Ej. Tolcayuca">
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label for="minPrice">Precio mínimo (MXN)</label>
+            <input id="minPrice" type="number" min="0" placeholder="0">
+          </div>
+          <div class="field">
+            <label for="maxPrice">Precio máximo (MXN)</label>
+            <input id="maxPrice" type="number" min="0" placeholder="Sin límite">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="minArea">Superficie mínima (m²)</label>
+          <input id="minArea" type="number" min="0" placeholder="Ej. 200">
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label for="docs">Documentación</label>
+            <select id="docs">
+              <option value="todos">Cualquiera</option>
+              <option value="escritura">Escritura</option>
+              <option value="ejidal">Ejidal</option>
+              <option value="cesión">Cesión de derechos</option>
+              <option value="pendiente">Por verificar</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="service">Servicios</label>
+            <select id="service">
+              <option value="todos">Cualquiera</option>
+              <option value="agua">Agua</option>
+              <option value="luz">Luz</option>
+              <option value="drenaje">Drenaje</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="filters-actions">
+          <button id="searchBtn" class="btn btn-primary">⌕ Buscar propiedades</button>
+          <button id="resetBtn" class="btn btn-secondary" title="Limpiar filtros">Limpiar</button>
+        </div>
+
+        <p class="filters-note">
+          Los filtros de documentación y servicios solo se pueden aplicar a anuncios que proporcionen esos datos.
+          Un anuncio no verificado no acredita la situación legal del inmueble.
+        </p>
+      </section>
+
+      <section class="panel results-panel">
+        <div class="results-head">
+          <strong>Propiedades encontradas</strong>
+          <span id="resultCount" class="count">0 resultados</span>
+        </div>
+
+        <div id="resultsList" class="results-list">
+          <div class="empty">
+            Selecciona una zona y pulsa <b>Buscar propiedades</b>.<br>
+            Los anuncios sin coordenadas aparecerán en esta lista, pero no tendrán marcador exacto en el mapa.
+          </div>
+        </div>
+
+        <div class="statusbar">
+          <span>
+            <i class="status-dot"></i>
+            <span id="statusText">Listo para buscar</span>
+          </span>
+          <span id="lastUpdated">—</span>
+        </div>
+      </section>
+
+    </aside>
+
+    <section class="panel map-panel">
+      <div class="map-floating">
+        <div class="map-tip">
+          <strong>Selecciona el área de interés</strong>
+          <span>Acerca el mapa, dibuja un polígono o traza un radio.</span>
+        </div>
+
+        <div class="map-tools">
+          <button class="btn btn-outline" id="mexicoBtn">México</button>
+          <button class="btn btn-outline" id="clearAreaBtn">Quitar área</button>
+        </div>
+      </div>
+
+      <div id="map" aria-label="Mapa interactivo de búsqueda inmobiliaria"></div>
+
+      <div class="map-legend">
+        <span><i class="legend-dot" style="background:#0f9f91"></i>Terreno</span>
+        <span><i class="legend-dot" style="background:#2563eb"></i>Casa</span>
+        <span><i class="legend-dot" style="background:#e88a24"></i>Otros</span>
+        <span>Los círculos/polígonos delimitan la búsqueda</span>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+
+  <script>
+    // =============================================================
+    // CONFIGURACIÓN: pega aquí la URL /exec de tu implementación Apps Script.
+    // No agregues parámetros ni uses la URL /dev.
+    // =============================================================
+
+    const RADAR_APP = {
+      API_URL: 'PEGA_AQUI_LA_URL_DE_TU_WEB_APP',
+      JSONP_TIMEOUT_MS: 25000
+    };
+
+    const STATE_CENTERS = {
+      'Aguascalientes':[21.8853,-102.2916],
+      'Baja California':[30.8406,-115.2838],
+      'Baja California Sur':[26.0444,-111.6661],
+      'Campeche':[19.8301,-90.5349],
+      'Chiapas':[16.7569,-93.1292],
+      'Chihuahua':[28.6320,-106.0691],
+      'Ciudad de México':[19.4326,-99.1332],
+      'Coahuila':[27.0587,-101.7068],
+      'Colima':[19.2452,-103.7241],
+      'Durango':[24.0277,-104.6532],
+      'Estado de México':[19.3553,-99.6500],
+      'Guanajuato':[21.0190,-101.2574],
+      'Guerrero':[17.4392,-99.5451],
+      'Hidalgo':[20.0911,-98.7624],
+      'Jalisco':[20.6597,-103.3496],
+      'Michoacán':[19.5665,-101.7068],
+      'Morelos':[18.6813,-99.1013],
+      'Nayarit':[21.7514,-104.8455],
+      'Nuevo León':[25.5922,-99.9962],
+      'Oaxaca':[17.0732,-96.7266],
+      'Puebla':[19.0414,-98.2063],
+      'Querétaro':[20.5888,-100.3899],
+      'Quintana Roo':[19.1817,-88.4791],
+      'San Luis Potosí':[22.1565,-100.9855],
+      'Sinaloa':[25.1721,-107.4795],
+      'Sonora':[29.2972,-110.3309],
+      'Tabasco':[17.8409,-92.6189],
+      'Tamaulipas':[24.2669,-98.8363],
+      'Tlaxcala':[19.3139,-98.2404],
+      'Veracruz':[19.1738,-96.1342],
+      'Yucatán':[20.7099,-89.0943],
+      'Zacatecas':[22.7709,-102.5832]
+    };
+
+    const map = L.map('map', { zoomControl: true }).setView([23.6345, -102.5528], 5);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
+    }).addTo(map);
+
+    const drawnItems = new L.FeatureGroup().addTo(map);
+    const markerLayer = L.layerGroup().addTo(map);
+
+    let activeArea = null;
+    let currentItems = [];
+    let markerById = {};
+
+    const drawControl = new L.Control.Draw({
+      position: 'bottomright',
+      draw: {
+        polygon: {
+          allowIntersection: false,
+          showArea: true,
+          shapeOptions: {
+            color: '#2563eb',
+            weight: 3,
+            fillOpacity: .10
+          }
+        },
+        circle: {
+          shapeOptions: {
+            color: '#0f9f91',
+            weight: 3,
+            fillOpacity: .10
+          }
+        },
+        rectangle: {
+          shapeOptions: {
+            color: '#2563eb',
+            weight: 3,
+            fillOpacity: .08
+          }
+        },
+        polyline: false,
+        marker: false,
+        circlemarker: false
+      },
+      edit: {
+        featureGroup: drawnItems,
+        edit: false,
+        remove: true
+      }
+    });
+
+    map.addControl(drawControl);
+
+    map.on(L.Draw.Event.CREATED, function (event) {
+      drawnItems.clearLayers();
+      drawnItems.addLayer(event.layer);
+      activeArea = event.layer;
+      setStatus('Área delimitada. Pulsa Buscar propiedades.');
+    });
+
+    map.on('draw:deleted', function () {
+      activeArea = null;
+    });
+
+    map.on('draw:edited', function () {
+      activeArea = drawnItems.getLayers()[0] || null;
+    });
+
+    document.getElementById('state').addEventListener('change', function () {
+      const center = STATE_CENTERS[this.value];
+
+      if (center) map.setView(center, 8);
+      else map.setView([23.6345, -102.5528], 5);
+    });
+
+    document.getElementById('mexicoBtn').addEventListener('click', () => {
+      map.setView([23.6345, -102.5528], 5);
+    });
+
+    document.getElementById('clearAreaBtn').addEventListener('click', () => {
+      drawnItems.clearLayers();
+      activeArea = null;
+      setStatus('Área de búsqueda eliminada.');
+    });
+
+    document.getElementById('searchBtn').addEventListener('click', runSearch);
+    document.getElementById('resetBtn').addEventListener('click', resetFilters);
+
+    function getFilters() {
+      return {
+        q: value('q'),
+        type: value('type'),
+        source: value('source'),
+        state: value('state'),
+        municipality: value('municipality'),
+        minPrice: value('minPrice'),
+        maxPrice: value('maxPrice'),
+        minArea: value('minArea'),
+        docs: value('docs'),
+        service: value('service'),
+        bounds: activeArea ? JSON.stringify(boundsForActiveArea()) : ''
+      };
+    }
+
+    function value(id) {
+      return document.getElementById(id).value.trim();
+    }
+
+    function boundsForActiveArea() {
+      const b = activeArea.getBounds();
+      const sw = b.getSouthWest();
+      const ne = b.getNorthEast();
+
+      return {
+        south: sw.lat,
+        north: ne.lat,
+        west: sw.lng,
+        east: ne.lng
+      };
+    }
+
+    function runSearch() {
+      const api = RADAR_APP.API_URL;
+
+      if (!api || api.indexOf('PEGA_AQUI') >= 0) {
+        setStatus('Falta configurar la URL del backend.');
+
+        showMessage(
+          'Antes de buscar, pega la URL /exec de Apps Script en la constante RADAR_APP.API_URL, al final de index.html.'
+        );
+
+        return;
+      }
+
+      const button = document.getElementById('searchBtn');
+
+      button.disabled = true;
+      button.textContent = 'Buscando…';
+
+      setStatus('Consultando la base y las fuentes habilitadas…');
+
+      const filters = getFilters();
+
+      jsonpRequest(Object.assign({ action: 'search' }, filters))
+        .then(data => {
+          if (!data || !data.ok) {
+            throw new Error(
+              data && data.error
+                ? data.error
+                : 'Respuesta no válida del servidor.'
+            );
+          }
+
+          currentItems = applyMapArea(data.items || []);
+
+          renderResults(
+            currentItems,
+            data.warnings || [],
+            data.sources || {}
+          );
+
+          renderMarkers(currentItems);
+
+          document.getElementById('resultCount').textContent =
+            currentItems.length + ' resultados';
+
+          document.getElementById('lastUpdated').textContent =
+            new Date().toLocaleTimeString('es-MX', {
+              hour: '2-digit',
+              minute: '2-digit'
+            });
+
+          const noCoordinates = currentItems.filter(
+            x => !hasCoordinates(x)
+          ).length;
+
+          setStatus(
+            currentItems.length +
+            ' anuncios; ' +
+            noCoordinates +
+            ' sin coordenadas exactas.'
+          );
+
+          zoomToMarkers();
+        })
+        .catch(err => {
+          setStatus('No se pudo completar la búsqueda.');
+          showMessage(escapeHtml(err.message || String(err)));
+        })
+        .finally(() => {
+          button.disabled = false;
+          button.textContent = '⌕ Buscar propiedades';
+        });
+    }
+
+    function jsonpRequest(params) {
+      return new Promise((resolve, reject) => {
+        const callbackId =
+          'cb_' + Date.now() + '_' + Math.floor(Math.random() * 1000000);
+
+        const script = document.createElement('script');
+        let finished = false;
+
+        const cleanup = () => {
+          if (finished) return;
+
+          finished = true;
+
+          clearTimeout(timer);
+          delete window.RadarCallbacks[callbackId];
+
+          if (script.parentNode) {
+            script.parentNode.removeChild(script);
+          }
+        };
+
+        window.RadarCallbacks = window.RadarCallbacks || {};
+
+        window.RadarCallbacks[callbackId] = data => {
+          cleanup();
+          resolve(data);
+        };
+
+        const query = new URLSearchParams(
+          Object.assign({}, params, {
+            callback: 'RadarCallbacks.' + callbackId
+          })
+        );
+
+        script.onerror = () => {
+          cleanup();
+
+          reject(
+            new Error(
+              'No fue posible abrir el backend. Revisa la URL /exec y la implementación pública de Apps Script.'
+            )
+          );
+        };
+
+        const timer = setTimeout(() => {
+          cleanup();
+          reject(new Error('El servidor no respondió a tiempo.'));
+        }, RADAR_APP.JSONP_TIMEOUT_MS);
+
+        script.src = RADAR_APP.API_URL + '?' + query.toString();
+
+        document.body.appendChild(script);
+      });
+    }
+
+    function applyMapArea(items) {
+      if (!activeArea) return items;
+
+      return items.filter(item => {
+        if (!hasCoordinates(item)) return false;
+
+        const point = L.latLng(
+          Number(item.latitud),
+          Number(item.longitud)
+        );
+
+        if (activeArea instanceof L.Circle) {
+          return map.distance(
+            activeArea.getLatLng(),
+            point
+          ) <= activeArea.getRadius();
+        }
+
+        if (
+          activeArea instanceof L.Polygon ||
+          activeArea instanceof L.Rectangle
+        ) {
+          return pointInLayer(point, activeArea);
+        }
+
+        return true;
+      });
+    }
+
+    function pointInLayer(point, layer) {
+      const latlngs = layer.getLatLngs();
+      const ring = Array.isArray(latlngs[0])
+        ? latlngs[0]
+        : latlngs;
+
+      let inside = false;
+
+      for (
+        let i = 0, j = ring.length - 1;
+        i < ring.length;
+        j = i++
+      ) {
+        const xi = ring[i].lat;
+        const yi = ring[i].lng;
+        const xj = ring[j].lat;
+        const yj = ring[j].lng;
+
+        const intersect =
+          ((yi > point.lng) !== (yj > point.lng)) &&
+          (
+            point.lat <
+            (xj - xi) * (point.lng - yi) /
+            ((yj - yi) || 0.0000001) + xi
+          );
+
+        if (intersect) inside = !inside;
+      }
+
+      return inside;
+    }
+
+    function renderMarkers(items) {
+      markerLayer.clearLayers();
+      markerById = {};
+
+      items.forEach(item => {
+        if (!hasCoordinates(item)) return;
+
+        const color = markerColor(item.tipo);
+
+        const icon = L.divIcon({
+          className: 'radar-marker',
+          html:
+            '<div style="' +
+            'width:17px;height:17px;' +
+            'border:3px solid white;' +
+            'border-radius:50%;' +
+            'background:' + color + ';' +
+            'box-shadow:0 2px 8px rgba(0,0,0,.35)' +
+            '"></div>',
+          iconSize: [17, 17],
+          iconAnchor: [8, 8]
+        });
+
+        const marker = L.marker(
+          [Number(item.latitud), Number(item.longitud)],
+          { icon }
+        ).addTo(markerLayer);
+
+        marker.bindPopup(popupHtml(item));
+        markerById[item.id] = marker;
+      });
+    }
+
+    function popupHtml(item) {
+      return (
+        '<div class="popup-title">' +
+        escapeHtml(item.titulo) +
+        '</div>' +
+
+        '<div class="popup-price">' +
+        formatPrice(item.precio, item.moneda) +
+        '</div>' +
+
+        '<div class="popup-small">' +
+        escapeHtml(
+          [item.municipio, item.estado]
+            .filter(Boolean)
+            .join(', ') || 'Ubicación no especificada'
+        ) +
+        (item.ubicacion_aproximada
+          ? ' · ubicación aproximada'
+          : '') +
+        '</div>' +
+
+        (item.url
+          ? '<div class="popup-small">' +
+            '<a href="' + safeUrl(item.url) +
+            '" target="_blank" rel="noopener">' +
+            'Abrir anuncio original ↗</a></div>'
+          : '')
+      );
+    }
+
+    function renderResults(items, warnings, sources) {
+      const list = document.getElementById('resultsList');
+      list.innerHTML = '';
+
+      if (warnings.length) {
+        const warning = document.createElement('div');
+
+        warning.className = 'warnings';
+        warning.textContent = warnings.join(' ');
+
+        list.appendChild(warning);
+      }
+
+      if (!items.length) {
+        const empty = document.createElement('div');
+
+        empty.className = 'empty';
+
+        empty.innerHTML =
+          'No se encontraron anuncios con estos criterios.<br>' +
+          'Prueba ampliar el área, quitar algún filtro o cargar anuncios en la hoja <b>ANUNCIOS</b>.';
+
+        list.appendChild(empty);
+        return;
+      }
+
+      items.forEach(item => {
+        const card = document.createElement('article');
+        card.className = 'result-card';
+
+        const photo =
+          item.imagen && /^https?:\/\//i.test(item.imagen)
+            ? '<img class="result-photo" src="' +
+              safeUrl(item.imagen) +
+              '" alt="" loading="lazy" referrerpolicy="no-referrer">'
+            : '<div class="result-photo result-placeholder">⌂</div>';
+
+        const location = [
+          item.localidad,
+          item.municipio,
+          item.estado
+        ].filter(Boolean).join(', ') || 'Ubicación no indicada';
+
+        const area = item.superficie_m2
+          ? Number(item.superficie_m2).toLocaleString('es-MX') + ' m²'
+          : 'Superficie no indicada';
+
+        const geo = !hasCoordinates(item)
+          ? 'Sin coordenadas'
+          : (
+            item.ubicacion_aproximada
+              ? 'Ubicación aproximada'
+              : 'Ubicado en mapa'
+          );
+
+        const geoClass =
+          (!hasCoordinates(item) || item.ubicacion_aproximada)
+            ? 'chip warn'
+            : 'chip';
+
+        card.innerHTML =
+          photo +
+          '<div>' +
+            '<h3 class="result-title">' +
+              escapeHtml(item.titulo) +
+            '</h3>' +
+
+            '<p class="result-price">' +
+              formatPrice(item.precio, item.moneda) +
+            '</p>' +
+
+            '<div class="result-meta">' +
+              escapeHtml(location) +
+              '<br>' +
+              escapeHtml(area) +
+            '</div>' +
+
+            '<div class="chips">' +
+              '<span class="chip source">' +
+                escapeHtml(item.fuente || 'Fuente') +
+              '</span>' +
+              '<span class="' + geoClass + '">' +
+                geo +
+              '</span>' +
+            '</div>' +
+
+            (item.url
+              ? '<a class="open-link" href="' +
+                safeUrl(item.url) +
+                '" target="_blank" rel="noopener">' +
+                'Ver publicación original ↗</a>'
+              : '') +
+
+          '</div>';
+
+        card.addEventListener('click', function (event) {
+          if (event.target.closest('a')) return;
+
+          const marker = markerById[item.id];
+
+          if (marker) {
+            map.setView(marker.getLatLng(), 15);
+            marker.openPopup();
+          }
+        });
+
+        list.appendChild(card);
+      });
+    }
+
+    function hasCoordinates(item) {
+      return (
+        item.latitud !== null &&
+        item.longitud !== null &&
+        item.latitud !== '' &&
+        item.longitud !== '' &&
+        isFinite(Number(item.latitud)) &&
+        isFinite(Number(item.longitud)) &&
+        Math.abs(Number(item.latitud)) <= 90 &&
+        Math.abs(Number(item.longitud)) <= 180
+      );
+    }
+
+    function markerColor(type) {
+      if (type === 'terreno') return '#0f9f91';
+      if (type === 'casa') return '#2563eb';
+      return '#e88a24';
+    }
+
+    function zoomToMarkers() {
+      const markers = [];
+
+      markerLayer.eachLayer(layer => {
+        if (layer.getLatLng) {
+          markers.push(layer.getLatLng());
+        }
+      });
+
+      if (markers.length === 1) {
+        map.setView(markers[0], 13);
+      } else if (markers.length > 1) {
+        map.fitBounds(
+          L.latLngBounds(markers).pad(.18),
+          { maxZoom: 14 }
+        );
+      } else {
+        const state = value('state');
+
+        if (STATE_CENTERS[state]) {
+          map.setView(STATE_CENTERS[state], 8);
+        }
+      }
+    }
+
+    function formatPrice(price, currency) {
+      if (
+        price === null ||
+        price === undefined ||
+        price === ''
+      ) {
+        return 'Precio por consultar';
+      }
+
+      try {
+        return new Intl.NumberFormat('es-MX', {
+          style: 'currency',
+          currency: currency || 'MXN',
+          maximumFractionDigits: 0
+        }).format(Number(price));
+      } catch (e) {
+        return '$' + Number(price).toLocaleString('es-MX');
+      }
+    }
+
+    function safeUrl(url) {
+      try {
+        const u = new URL(url);
+
+        return (
+          u.protocol === 'https:' ||
+          u.protocol === 'http:'
+        )
+          ? escapeHtml(u.href)
+          : '#';
+      } catch (e) {
+        return '#';
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value == null ? '' : value).replace(
+        /[&<>"']/g,
+        c => ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;'
+        }[c])
+      );
+    }
+
+    function setStatus(text) {
+      document.getElementById('statusText').textContent = text;
+    }
+
+    function showMessage(html) {
+      const list = document.getElementById('resultsList');
+
+      list.innerHTML =
+        '<div class="warnings">' +
+        html +
+        '</div>' +
+        list.innerHTML;
+    }
+
+    function resetFilters() {
+      [
+        'q',
+        'type',
+        'source',
+        'state',
+        'municipality',
+        'minPrice',
+        'maxPrice',
+        'minArea',
+        'docs',
+        'service'
+      ].forEach(id => {
+        const el = document.getElementById(id);
+
+        el.value =
+          id === 'type'
+            ? 'todos'
+            : id === 'source'
+              ? 'all'
+              : (
+                id === 'docs' || id === 'service'
+                  ? 'todos'
+                  : ''
+              );
+      });
+
+      drawnItems.clearLayers();
+      activeArea = null;
+
+      markerLayer.clearLayers();
+      markerById = {};
+
+      currentItems = [];
+
+      document.getElementById('resultsList').innerHTML =
+        '<div class="empty">' +
+        'Filtros limpios. Selecciona un área y realiza una nueva búsqueda.' +
+        '</div>';
+
+      document.getElementById('resultCount').textContent =
+        '0 resultados';
+
+      map.setView([23.6345, -102.5528], 5);
+
+      setStatus('Filtros restablecidos.');
+    }
+
+    // Comprueba el backend al abrir la aplicación.
+    // No consulta anuncios automáticamente.
+    (function checkBackend() {
+      if (
+        !RADAR_APP.API_URL ||
+        RADAR_APP.API_URL.indexOf('PEGA_AQUI') >= 0
+      ) {
+        setStatus('Falta configurar backend');
+        return;
+      }
+
+      jsonpRequest({ action: 'ping' })
+        .then(data => {
+          if (data && data.ok && data.databaseReady) {
+            setStatus('Backend conectado');
+          } else {
+            setStatus('Backend conectado; falta inicializar la base');
+          }
+        })
+        .catch(() => {
+          setStatus('No se pudo contactar al backend');
+        });
+    })();
+
+  </script>
+</body>
+</html>
